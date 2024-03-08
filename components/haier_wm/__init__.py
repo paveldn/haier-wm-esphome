@@ -26,9 +26,10 @@ CONFIG_SCHEMA = cv.Schema(
 ).extend(uart.UART_DEVICE_SCHEMA).extend(cv.COMPONENT_SCHEMA)
 
 async def to_code(config):
+    cg.add_build_flag(f"-DHAIER_LOG_LEVEL=6")
     cg.add(haier_ns.init_haier_protocol_logging())
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
     # https://github.com/paveldn/HaierProtocol
-    cg.add_library("pavlodn/HaierProtocol", "0.9.25")
+    cg.add_library("pavlodn/HaierProtocol", "0.9.26")

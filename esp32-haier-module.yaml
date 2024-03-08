@@ -1,0 +1,101 @@
+substitutions:
+  device_name: Haier Washing Machine
+  device_id: haier_washing_machine
+  uart_id: uart_id
+
+esphome:
+  name: ${device_id}
+  comment: ${device_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_FREERTOS_UNICORE: y
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ap_timeout: 5min
+
+captive_portal:
+    
+api:
+  reboot_timeout: 0s
+
+ota:
+
+web_server:
+
+logger:
+  level: VERBOSE
+
+uart:
+  baud_rate: 9600
+  tx_pin: 17
+  rx_pin: 16
+  id: ${uart_id}
+
+external_components:
+  source:
+    type: local
+    path: ./components
+  components: [ haier_wm ]
+
+haier_wm:
+  id: ${device_id}
+  uart_id: ${uart_id}
+
+button:
+  - platform: template
+    name: "1. Get device version (0x61)"
+    on_press:
+      then:
+        - lambda: |-
+            uint8_t msg_buffer[2] = {0b00000000, 0b00000111};
+            id(${device_id})->send_custom_command(haier_protocol::HaierMessage(haier_protocol::FrameType::GET_DEVICE_VERSION, msg_buffer, sizeof(msg_buffer)));
+  - platform: template
+    name: "2. Get device ID (0x70)"
+    on_press:
+      then:
+        - lambda: id(${device_id})->send_custom_command(haier_protocol::HaierMessage(haier_protocol::FrameType::GET_DEVICE_ID));
+  - platform: template
+    name: "3. Get alarm status (0x73)"
+    on_press:
+      then:
+        - lambda: id(${device_id})->send_custom_command(haier_protocol::HaierMessage(haier_protocol::FrameType::GET_ALARM_STATUS));
+  - platform: template
+    name: "4 Get status (0x01)"
+    on_press:
+      then:
+        - lambda: id(${device_id})->send_custom_command(haier_protocol::HaierMessage(haier_protocol::FrameType::CONTROL, 0x4D01));
+  - platform: template
+    name: "5. Get big data (0x01)"
+    on_press:
+      then:
+        - lambda: id(${device_id})->send_custom_command(haier_protocol::HaierMessage(haier_protocol::FrameType::CONTROL, 0x4DFE));
+  - platform: template
+    name: "6. Get managment information (0xFC)"
+    on_press:
+      then:
+        - lambda: id(${device_id})->send_custom_command(haier_protocol::HaierMessage(haier_protocol::FrameType::GET_MANAGEMENT_INFORMATION));
+  - platform: template
+    name: "7. Report network status (0xF7)"
+    on_press:
+      then:
+        - lambda: |-
+            static uint8_t wifi_status_data[4] = {0x00, 0x00, 0x00, 0x00};
+            if (wifi::global_wifi_component->is_connected()) {
+              wifi_status_data[1] = 0;
+              int8_t rssi = wifi::global_wifi_component->wifi_rssi();
+              wifi_status_data[3] = uint8_t((128 + rssi) / 1.28f);
+              ESP_LOGD("haier-test", "WiFi signal is: %ddBm => %d%%", rssi, wifi_status_data[3]);
+            } else {
+              ESP_LOGD("haier-test", "WiFi is not connected");
+              wifi_status_data[1] = 1;
+              wifi_status_data[3] = 0;
+            }
+            auto message = haier_protocol::HaierMessage(haier_protocol::FrameType::REPORT_NETWORK_STATUS, wifi_status_data, sizeof(wifi_status_data));
+            id(${device_id})->send_custom_command(message);

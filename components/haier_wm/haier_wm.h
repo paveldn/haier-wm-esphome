@@ -28,9 +28,12 @@ class HaierWashingMachine : public esphome::Component,
   };
   bool can_send_message() const { return haier_protocol_.get_outgoing_queue_size() == 0; };
   void set_answer_timeout(uint32_t timeout);
-
+  void send_custom_command(const haier_protocol::HaierMessage &message);
  protected:
   virtual void set_handlers();
+  haier_protocol::HandlerError accept_all_message_handler_(haier_protocol::FrameType type, const uint8_t *buffer, size_t size);
+  haier_protocol::HandlerError default_answer_handler(haier_protocol::FrameType message_type, haier_protocol::FrameType request_type, const uint8_t* data, size_t data_size);
+
   haier_protocol::ProtocolHandler haier_protocol_;
 };
 
