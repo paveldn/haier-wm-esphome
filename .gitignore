@@ -1,0 +1,8 @@
+# Gitignore settings for ESPHome
+/.esphome/
+__pycache__/
+/.vscode/
+/secrets.yaml
+/buildlog.txt
+*.bak
+*.local.yaml
